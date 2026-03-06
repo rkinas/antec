@@ -92,6 +92,105 @@ The implemented product is a self-hosted, local-first, multi-surface AI assistan
 
 The product behaves as a personal assistant operating system rather than a single chat UI. It exposes operational controls, admin APIs, runtime configuration, storage/export surfaces, and extensibility primitives in addition to chat.
 
+### 3.1 Component Overview
+
+The following Mermaid diagram shows the major implemented components and how they relate at runtime.
+
+```mermaid
+flowchart LR
+    U[Users and External Clients] --> UI[Web Console / WS Clients / REST Clients]
+    U --> CHIN[External Channels]
+
+    UI --> GW[Gateway Layer]
+    CHIN --> ROUTER[Channel Router]
+    ROUTER --> GW
+
+    GW --> AUTH[Auth and Approval Flow]
+    GW --> SESS[Session and Event Management]
+    GW --> AGENT[AgentLoop Runtime]
+    GW --> API[Admin and Ops APIs]
+
+    AGENT --> ROUTE[Model Routing and Failover]
+    ROUTE --> MODELS[Anthropic / OpenAI / Ollama / Google]
+
+    AGENT --> TOOLS[Tool Registry]
+    TOOLS --> NATIVE[Native Tools]
+    TOOLS --> SKTOOLS[Skill Tools]
+    TOOLS --> MCPTOOLS[MCP Tools]
+    TOOLS --> MSGTOOLS[Messaging Tools]
+
+    AGENT --> MEMORY[Memory Manager]
+    AGENT --> BEHAVIOR[Persona / Behavior Layer]
+
+    NATIVE --> WORK[Workspace / REPL / Shell / Browser / Scheduler]
+    SKTOOLS --> SKILLS[Skills Platform]
+    MCPTOOLS --> MCP[MCP Manager and Servers]
+    MSGTOOLS --> ROUTER
+
+    API --> ADMIN[Config / Metrics / Audit / Data / Models / Channels]
+
+    SKILLS --> REG[Extensions / Hands / Agents Registries]
+    MCP --> REG
+    GW --> SSE[SSE Broadcast Stream]
+
+    AUTH --> DB[(SQLite)]
+    SESS --> DB
+    MEMORY --> DB
+    WORK --> DB
+    SKILLS --> DB
+    MCP --> DB
+    REG --> DB
+    ADMIN --> DB
+
+    SEC[Security Controls: Vault, Redaction, Injection Detection, Rate Limits, Sandboxing, Crash Guard]
+    SEC --> GW
+    SEC --> AGENT
+    SEC --> TOOLS
+    SEC --> WORK
+```
+
+### 3.2 Message and Tool Execution Flow
+
+This diagram shows the main runtime flow for an incoming message through routing, tool use, memory, and outbound delivery.
+
+```mermaid
+flowchart TD
+    A[User Message] --> B[Gateway Transport]
+    B --> C{Transport Type}
+    C -->|WebSocket| D[OTP Token Auth]
+    C -->|REST| E[REST Chat Endpoint]
+    C -->|Channel| F[Channel Ingress]
+
+    D --> G[Ensure Session]
+    E --> G
+    F --> G
+
+    G --> H[Inbound Injection Scan]
+    H --> I[AgentLoop]
+    I --> J[Auto Recall Memory]
+    J --> K[Context Compaction]
+    K --> L[Route to Model]
+    L --> M[Provider Stream]
+
+    M --> N{Tool Calls Needed?}
+    N -->|No| O[Persist Assistant Response]
+    N -->|Yes| P[Tool Registry]
+
+    P --> Q[Validate Schema / Rate Limits / Circuit Breakers]
+    Q --> R[Execute Native / Skill / MCP / Messaging Tool]
+    R --> S[Scan Tool Output for Injection and Secrets]
+    S --> T[Persist Tool Result]
+    T --> U[Continue Model Turn]
+    U --> N
+
+    O --> V[Emit WS or SSE Events]
+    O --> W[Persist Usage and Messages]
+    O --> X[Optional Channel Outbound Delivery]
+
+    W --> Y[Auto Memory Extraction]
+    Y --> Z[Pending Memory Approval or Direct Save]
+```
+
 ## 4. Product Goals Inferred From Current Implementation
 
 The current implementation is optimized for the following goals:
@@ -1986,4 +2085,3 @@ For a rebuild effort, this document should be used as:
 - the source for test-plan generation
 
 If a rewrite intentionally changes one of the caveated current behaviors above, that change should be called out as an explicit product decision rather than accidentally drifting from current behavior.
-
