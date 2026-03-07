@@ -1,6 +1,6 @@
 # Antec PRD
 
-![Antec](assets/antec.png)
+![Antec](assets/antec-1.png)
 
 ## Project Goal
 
