@@ -192,6 +192,13 @@ sequenceDiagram
 | 10 | [Scheduler](prd/10-SCHEDULER.md) | `antec-scheduler` | Cron expressions, natural language scheduling, one-shot reminders, heartbeat monitoring |
 | 18 | [Statistics](prd/18-STATISTICS.md) | `antec-core` | Cost tracking, budget controls, tool metrics, retrieval quality, system health, diagnostics |
 
+### User Interface & CLI
+
+| # | Document | Crate | Description |
+|---|----------|-------|-------------|
+| 19 | [UI Specification](prd/19-UI.md) | `antec-console` | Design system -- color tokens, typography, spacing, component library, responsive breakpoints, accessibility (WCAG 2.1 AA) |
+| 20 | [CLI Reference](prd/20-CLI.md) | `src/main.rs` | Command-line interface -- 10 commands, setup wizard, secret/skill/memory/cron management, health diagnostics |
+
 ---
 
 ## Crate Map
