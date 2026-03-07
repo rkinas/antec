@@ -156,41 +156,41 @@ sequenceDiagram
 
 | # | Document | Crate | Description |
 |---|----------|-------|-------------|
-| 02 | [Core](02-CORE.md) | `antec-core` | Agent loop state machine, 4 LLM providers, context compaction (L0-L3), heuristic model routing, circuit breaker failover |
-| 12 | [Agents](12-AGENTS.md) | `antec-core` | 12 specialist agents, @mention routing, pattern matching, parallel execution, 3 merge strategies |
-| 13 | [Persona](13-PERSONA.md) | `antec-core` | Personality customization, behavior overlays with priorities, prompt composition, EN/PL i18n |
+| 02 | [Core](prd/02-CORE.md) | `antec-core` | Agent loop state machine, 4 LLM providers, context compaction (L0-L3), heuristic model routing, circuit breaker failover |
+| 12 | [Agents](prd/12-AGENTS.md) | `antec-core` | 12 specialist agents, @mention routing, pattern matching, parallel execution, 3 merge strategies |
+| 13 | [Persona](prd/13-PERSONA.md) | `antec-core` | Personality customization, behavior overlays with priorities, prompt composition, EN/PL i18n |
 
 ### Communication
 
 | # | Document | Crate | Description |
 |---|----------|-------|-------------|
-| 03 | [Gateway](03-GATEWAY.md) | `antec-gateway` | Axum HTTP/WS server, 148+ REST routes, OTP authentication, WebSocket streaming, SSE |
-| 08 | [Channels](08-CHANNELS.md) | `antec-channels` | 4 adapters (Console/Discord/WhatsApp/iMessage), unified message model, session isolation |
-| 16 | [Console](16-CONSOLE.md) | `antec-console` | Web UI -- 22 pages, dark monochrome design, responsive, WCAG 2.1 AA, vanilla HTML/CSS/JS |
+| 03 | [Gateway](prd/03-GATEWAY.md) | `antec-gateway` | Axum HTTP/WS server, 148+ REST routes, OTP authentication, WebSocket streaming, SSE |
+| 08 | [Channels](prd/08-CHANNELS.md) | `antec-channels` | 4 adapters (Console/Discord/WhatsApp/iMessage), unified message model, session isolation |
+| 16 | [Console](prd/16-CONSOLE.md) | `antec-console` | Web UI -- 22 pages, dark monochrome design, responsive, WCAG 2.1 AA, vanilla HTML/CSS/JS |
 
 ### Capabilities
 
 | # | Document | Crate | Description |
 |---|----------|-------|-------------|
-| 04 | [Tools](04-TOOLS.md) | `antec-tools` | 43+ built-in tools, 3-tier risk classification, approval gating, JSON Schema validation |
-| 09 | [Skills](09-SKILLS.md) | `antec-skills` | 66 builtin skills, SKILL.md format, 5 runtimes (Prompt/Python/Node/WASM/Builtin), hub marketplace |
-| 11 | [MCP](11-MCP.md) | `antec-mcp` | MCP client -- stdio/SSE/HTTP transports, tool discovery, McpToolHandler bridge |
-| 17 | [Extensions](17-EXTENSIONS.md) | `antec-extensions` | 25 integration templates, credential vault (ChaCha20), health monitoring, TOML format |
-| 15 | [Workspace](15-WORKSPACE.md) | `antec-tools` | File jail with versioning, diff/revert, REPL (JavaScript boa_engine + Python subprocess) |
+| 04 | [Tools](prd/04-TOOLS.md) | `antec-tools` | 43+ built-in tools, 3-tier risk classification, approval gating, JSON Schema validation |
+| 09 | [Skills](prd/09-SKILLS.md) | `antec-skills` | 66 builtin skills, SKILL.md format, 5 runtimes (Prompt/Python/Node/WASM/Builtin), hub marketplace |
+| 11 | [MCP](prd/11-MCP.md) | `antec-mcp` | MCP client -- stdio/SSE/HTTP transports, tool discovery, McpToolHandler bridge |
+| 17 | [Extensions](prd/17-EXTENSIONS.md) | `antec-extensions` | 25 integration templates, credential vault (ChaCha20), health monitoring, TOML format |
+| 15 | [Workspace](prd/15-WORKSPACE.md) | `antec-tools` | File jail with versioning, diff/revert, REPL (JavaScript boa_engine + Python subprocess) |
 
 ### Intelligence
 
 | # | Document | Crate | Description |
 |---|----------|-------|-------------|
-| 05 | [Memory](05-MEMORY.md) | `antec-memory` | Hybrid recall (BM25 + TF-IDF + embeddings via RRF), temporal decay, auto-extraction, dedup |
+| 05 | [Memory](prd/05-MEMORY.md) | `antec-memory` | Hybrid recall (BM25 + TF-IDF + embeddings via RRF), temporal decay, auto-extraction, dedup |
 
 ### Operations & Security
 
 | # | Document | Crate | Description |
 |---|----------|-------|-------------|
-| 07 | [Security](07-SECURITY.md) | `antec-security` | 9 defense layers -- injection detection, ChaCha20 vault, GCRA rate limiting, HMAC audit chain, WASM sandbox |
-| 10 | [Scheduler](10-SCHEDULER.md) | `antec-scheduler` | Cron expressions, natural language scheduling, one-shot reminders, heartbeat monitoring |
-| 18 | [Statistics](18-STATISTICS.md) | `antec-core` | Cost tracking, budget controls, tool metrics, retrieval quality, system health, diagnostics |
+| 07 | [Security](prd/07-SECURITY.md) | `antec-security` | 9 defense layers -- injection detection, ChaCha20 vault, GCRA rate limiting, HMAC audit chain, WASM sandbox |
+| 10 | [Scheduler](prd/10-SCHEDULER.md) | `antec-scheduler` | Cron expressions, natural language scheduling, one-shot reminders, heartbeat monitoring |
+| 18 | [Statistics](prd/18-STATISTICS.md) | `antec-core` | Cost tracking, budget controls, tool metrics, retrieval quality, system health, diagnostics |
 
 ---
 
@@ -248,67 +248,6 @@ antec (workspace root)
 | **Defense in depth** | 9 security layers -- no single bypass compromises the system |
 | **Cost awareness** | Heuristic model routing, budget limits, usage tracking -- AI costs are visible and controlled |
 | **Graceful degradation** | Circuit breaker failover, crash guard with degraded mode, backpressure on message queues |
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Rust toolchain (1.75+ recommended)
-- No other dependencies required -- SQLite is bundled
-
-### Build
-
-```bash
-# Debug build
-cargo build
-
-# Release build (optimized, recommended for deployment)
-cargo build --release
-```
-
-### Run
-
-```bash
-# Start with default config (~/.antec/antec.toml, created on first run)
-./target/release/antec
-
-# Start with custom config
-./target/release/antec --config /path/to/antec.toml
-
-# First run: an OTP pairing code is printed to stdout
-# Open http://127.0.0.1:8088 in your browser and enter the OTP to pair
-```
-
-### Test
-
-```bash
-# Run all tests (component + integration)
-cargo test
-
-# Run a single crate's tests
-cargo test -p antec-core
-
-# Run E2E tests
-cargo test --test e2e
-
-# Run with output visible
-cargo test -- --nocapture
-```
-
-### Directory Layout (Runtime)
-
-```
-~/.antec/
-  antec.toml          # Configuration file
-  antec.db            # SQLite database (WAL mode)
-  skills/             # Installed skills
-  workspace/          # File editor workspace
-  persona/            # Persona definitions
-  behaviors/          # Behavior overlays
-  agents/             # Agent TOML definitions (12 bundled)
-```
 
 ---
 
