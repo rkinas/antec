@@ -212,7 +212,11 @@ sequenceDiagram
 | 27 | [Parallel Execution](prd/27-PARALLEL.md) | `antec-core` | SubAgentRunner, ParallelExecutor with semaphore concurrency, 5 node tools, 3 merge strategies |
 | 28 | [REPL System](prd/28-REPL.md) | `antec-tools` | Sandboxed JS (boa_engine) + Python (subprocess) REPL, session-state replay, blocked patterns, 50MB limit |
 
----
+### Deployment
+
+| # | Document | Crate | Description |
+|---|----------|-------|-------------|
+| 29 | [Deployment](prd/28-DEPLOYMENT.md) | | Define the complete deployment pipeline -- build targets, packaging formats, release automation, install scripts etc. |
 ---
 
 ## Crate Map
