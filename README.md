@@ -151,6 +151,7 @@ sequenceDiagram
 | 01 | [Architecture](prd/01-ARCHITECTURE.md) | all | System blueprint -- 15-crate workspace, boot sequence, runtime layers, trust boundaries, deployment model |
 | 06 | [Storage](prd/06-STORAGE.md) | `antec-storage` | SQLite persistence -- 20 tables, FTS5, WAL mode, 21 migrations, repository traits, connection pool |
 | 14 | [Configuration](prd/14-CONFIGURATION.md) | `antec-core` | 5-layer config precedence (defaults/TOML/env/CLI/API), hot reload, setup wizard, CLI commands |
+| 30 | [Database](prd/30-DATABASE.md) | `antec-core` | Consolidate the complete SQLite database schema from all 29 PRD chapters and the implemented codebase |
 
 ### AI Engine
 
@@ -295,4 +296,4 @@ Each document follows a consistent structure:
 
 ## License
 
-*License terms to be determined.*
+*License MIT*
