@@ -199,6 +199,20 @@ sequenceDiagram
 | 19 | [UI Specification](prd/19-UI.md) | `antec-console` | Design system -- color tokens, typography, spacing, component library, responsive breakpoints, accessibility (WCAG 2.1 AA) |
 | 20 | [CLI Reference](prd/20-CLI.md) | `src/main.rs` | Command-line interface -- 10 commands, setup wizard, secret/skill/memory/cron management, health diagnostics |
 
+### Deep Dives
+
+| # | Document | Crate | Description |
+|---|----------|-------|-------------|
+| 21 | [Audit Logs](prd/21-AUDIT_LOGS.md) | `antec-security` | HMAC-SHA256 chained audit trail, tamper detection, chain verification, CSV export, retention cleanup |
+| 22 | [Behavior System](prd/22-BEHAVIOR.md) | `antec-core` | Filesystem-backed behavior overlays with YAML frontmatter priorities, hot-apply, 4KB limit |
+| 23 | [Chat Pipeline](prd/23-CHAT.md) | `antec-core` | Message processing pipeline -- AgentLoop state machine, tool call iteration, 4-level compaction (L0-L3), 16 StreamEvent types |
+| 24 | [Session Management](prd/24-SESSION.md) | `antec-gateway` | Session lifecycle -- creation, isolation, backpressure (semaphore+queue), persistence, restoration, archival, merging |
+| 25 | [Models & Routing](prd/25-MODELS.md) | `antec-core` | 4 LLM providers, circuit breaker failover, 10-signal heuristic model routing, credential vault |
+| 26 | [Environment & Runtime](prd/26-ENVIRONMENT.md) | `src/main.rs` | 16-step boot sequence, 5-layer config cascade, CLI commands, env vars, CrashGuard degraded mode |
+| 27 | [Parallel Execution](prd/27-PARALLEL.md) | `antec-core` | SubAgentRunner, ParallelExecutor with semaphore concurrency, 5 node tools, 3 merge strategies |
+| 28 | [REPL System](prd/28-REPL.md) | `antec-tools` | Sandboxed JS (boa_engine) + Python (subprocess) REPL, session-state replay, blocked patterns, 50MB limit |
+
+---
 ---
 
 ## Crate Map
