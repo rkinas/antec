@@ -73,7 +73,7 @@ Dependency DAG: `prd/01-ARCHITECTURE.md` §1.2. **No circular dependencies.**
 
 ## Rust Coding Standards
 
-Full standard: `skills/rust/SKILL.md` (179 rules, 14 categories). Key rules:
+Full standard: `.claude/skills/rust/SKILL.md` (179 rules, 14 categories). Key rules:
 
 ### Error Handling
 - Library crates: `thiserror` for typed error enums per crate
@@ -228,6 +228,6 @@ New tools need: `Tool` trait impl, JSON Schema, risk classification (`safe`/`mod
 | UI design | `prd/19-UI.md` |
 | Configuration | `prd/14-CONFIGURATION.md` |
 | Deployment | `prd/29-DEPLOYMENT.md` |
-| Rust standard | `skills/rust/SKILL.md` |
+| Rust standard | `.claude/skills/rust/SKILL.md` |
 | Tasks | `tasks/todo.md` |
 | Handover | `tasks/HANDOVER.md` |

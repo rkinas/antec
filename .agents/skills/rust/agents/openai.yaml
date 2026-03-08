@@ -1,0 +1,7 @@
+interface:
+  display_name: "Rust Coding Standard"
+  short_description: "179 rules across 14 categories for idiomatic, production-grade Rust"
+  brand_color: "#DEA584"
+
+policy:
+  allow_implicit_invocation: true

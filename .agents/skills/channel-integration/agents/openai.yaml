@@ -1,0 +1,7 @@
+interface:
+  display_name: "Channel Integration"
+  short_description: "Implement messaging channel adapters (Discord, Telegram, Slack, WhatsApp, Signal, Email, Bluesky, Teams, Twitch)"
+  brand_color: "#3B82F6"
+
+policy:
+  allow_implicit_invocation: true

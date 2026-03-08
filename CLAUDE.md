@@ -122,7 +122,7 @@ Context7 provides up-to-date library documentation during development. Configure
 
 ## Rust Coding Standards
 
-**Full standard: `skills/rust/SKILL.md`** (179 rules, 14 categories). Key rules enforced on this project:
+**Full standard: `.claude/skills/rust/SKILL.md`** (179 rules, 14 categories). Key rules enforced on this project:
 
 ### Error Handling
 - Libraries (`antec-*` crates): `thiserror` for typed errors. Every crate defines its own `Error` enum
@@ -359,7 +359,7 @@ When finishing a phase, wave, or when context is nearly exhausted:
 | UI design system | `prd/19-UI.md` |
 | Configuration schema | `prd/14-CONFIGURATION.md` |
 | Deployment & build | `prd/29-DEPLOYMENT.md` |
-| Rust coding standard | `skills/rust/SKILL.md` |
+| Rust coding standard | `.claude/skills/rust/SKILL.md` |
 | Current tasks | `tasks/todo.md` |
 | Lessons learned | `tasks/lessons.md` |
 | Session handover | `tasks/HANDOVER.md` |

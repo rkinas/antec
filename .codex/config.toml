@@ -1,0 +1,13 @@
+# Codex configuration for Antec project
+
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 1800
+
+[agents.channel-implementer]
+description = "Implements messaging channel adapters (Discord, Telegram, Slack, WhatsApp, Signal, Email, Bluesky, Teams, Twitch). Spawn per-channel for parallel implementation."
+config_file = "agents/channel-implementer.toml"

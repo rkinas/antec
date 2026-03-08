@@ -287,13 +287,84 @@ This project is designed for **autonomous agentic coding** -- AI coding assistan
 |------|---------|--------|
 | [CLAUDE.md](CLAUDE.md) | Development instructions for Claude Code | Claude Code CLI |
 | [AGENTS.md](AGENTS.md) | Universal development instructions | OpenAI Codex, Cursor, Windsurf, Copilot, Cline, Aider, etc. |
-| [skills/rust/SKILL.md](skills/rust/SKILL.md) | Rust coding standard (179 rules, 14 categories) | All agents |
+| [.claude/skills/rust/SKILL.md](.claude/skills/rust/SKILL.md) | Rust coding standard (179 rules, 14 categories) | All agents |
 
 **CLAUDE.md** is the primary instruction file. Claude Code reads it automatically at session start. It defines mandatory build checks, architecture constraints, coding standards, workflow orchestration (plan mode, subagents, verification loops), and session continuity via HANDOVER protocol.
 
 **AGENTS.md** contains the same project context and coding standards in a framework-agnostic format that any AI coding tool can consume.
 
-**skills/rust/SKILL.md** is the comprehensive Rust coding standard with 179 rules organized by priority (CRITICAL / HIGH / MEDIUM / LOW) across ownership, error handling, async patterns, API design, performance, testing, and more. All agents reference this file for Rust-specific decisions.
+**`.claude/skills/rust/SKILL.md`** (mirrored to `.agents/skills/rust/` for Codex) is the comprehensive Rust coding standard with 179 rules organized by priority (CRITICAL / HIGH / MEDIUM / LOW) across ownership, error handling, async patterns, API design, performance, testing, and more. All agents reference this file for Rust-specific decisions.
+
+### Channel Integration (Skill + Agent)
+
+Implementing 9 messaging channels is a major effort. We use a **Skill + Agent** pattern -- domain knowledge in a reusable skill, autonomous execution in a dedicated agent:
+
+| Component | Location | Role |
+|-----------|----------|------|
+| **Skill**: `channel-integration` | `.claude/skills/channel-integration/SKILL.md` | Universal channel adapter pattern -- trait interface, normalized message format, implementation checklist, connection patterns, security requirements, rate limiting, message chunking rules |
+| **Agent**: `channel-implementer` | `.claude/agents/channel-implementer.md` | Autonomous agent that implements a single channel adapter. Preloads the skill, follows the checklist, writes code + tests, verifies compilation |
+| **References** (9 files) | `.claude/skills/channel-integration/references/` | Per-platform API specs -- endpoints, auth flows, payload formats, filtering rules, rate limits, platform quirks |
+
+**Why Skill + Agent together (not one or the other):**
+
+- **Skill alone** provides knowledge but runs in the main context -- no isolation, can't parallelize, clutters the conversation with implementation details
+- **Agent alone** can execute in isolation but has no domain knowledge -- it would need to research each platform API from scratch every time
+- **Skill + Agent** = the agent spawns with full platform knowledge preloaded, works autonomously in isolated context, and can be launched **in parallel** for multiple channels simultaneously
+
+**Supported channels:**
+
+| Channel | Connection Pattern | Reference |
+|---------|-------------------|-----------|
+| Discord | WebSocket Gateway + REST | `references/discord.md` |
+| Telegram | Long Polling (`getUpdates`) | `references/telegram.md` |
+| Slack | Socket Mode (WebSocket) + Web API | `references/slack.md` |
+| WhatsApp | Webhook + Cloud API REST | `references/whatsapp.md` |
+| Signal | REST Polling (signal-cli) | `references/signal.md` |
+| Email | IMAP IDLE + SMTP | `references/email.md` |
+| Bluesky | AT Protocol REST Polling | `references/bluesky.md` |
+| Teams | Bot Framework Webhook | `references/teams.md` |
+| Twitch | IRC over WebSocket | `references/twitch.md` |
+
+**Usage -- implement a single channel:**
+```
+Use the channel-implementer agent to implement the Discord adapter
+```
+
+**Usage -- implement multiple channels in parallel:**
+```
+Use the channel-implementer agent to implement Discord, Telegram, and Slack adapters in parallel
+```
+
+**Language-agnostic design:** The skill's patterns (trait interface, normalized messages, connection patterns, security rules) apply to any language. The agent's system prompt includes Rust-specific patterns but the skill itself works for Python, TypeScript, Go, etc. To adapt for another language, create a variant agent with language-specific instructions that still preloads the same `channel-integration` skill.
+
+### OpenAI Codex Configuration
+
+Skills and agents are mirrored to Codex's directory format for full compatibility:
+
+```
+.agents/                              # Codex skills (agent skills standard)
+  skills/
+    rust/
+      SKILL.md                        # Same 179-rule Rust standard
+      agents/openai.yaml              # Codex UI metadata + invocation policy
+    channel-integration/
+      SKILL.md                        # Same channel adapter pattern
+      agents/openai.yaml
+      references/                     # Same 9 per-platform API specs
+
+.codex/                               # Codex config + agent roles
+  config.toml                         # Multi-agent enabled, role registration
+  agents/
+    channel-implementer.toml          # Agent role config (model, instructions)
+```
+
+Codex multi-agent is enabled with `channel-implementer` registered as an agent role using `gpt-5.3-codex` with `model_reasoning_effort = "high"`. Both skills use `allow_implicit_invocation: true` so Codex activates them automatically when the task matches.
+
+| Platform | Instructions | Skills | Agent |
+|----------|-------------|--------|-------|
+| **Claude Code** | `CLAUDE.md` | `.claude/skills/` | `.claude/agents/` |
+| **OpenAI Codex** | `AGENTS.md` | `.agents/skills/` | `.codex/config.toml` + `.codex/agents/` |
+| **Other AI tools** | `AGENTS.md` | `.claude/skills/` (agent skills standard) | — |
 
 ### LSP Integration (rust-analyzer)
 
@@ -350,7 +421,7 @@ We use **Context7** as an MCP (Model Context Protocol) server to provide AI agen
 
 ### Rust Coding Standard
 
-The full coding standard lives in [`skills/rust/SKILL.md`](skills/rust/SKILL.md). It defines 179 rules across 14 prioritized categories:
+The full coding standard lives in [`.claude/skills/rust/SKILL.md`](.claude/skills/rust/SKILL.md). It defines 179 rules across 14 prioritized categories:
 
 | Priority | Category | Prefix | Rules | Key Focus |
 |----------|----------|--------|-------|-----------|
