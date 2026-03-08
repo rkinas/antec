@@ -277,6 +277,100 @@ antec (workspace root)
 
 ---
 
+## Development Standards & AI-Assisted Coding
+
+This project is designed for **autonomous agentic coding** -- AI coding assistants build the system from the PRD documents with minimal human intervention. Three files govern how agents work:
+
+### Agent Instruction Files
+
+| File | Purpose | Target |
+|------|---------|--------|
+| [CLAUDE.md](CLAUDE.md) | Development instructions for Claude Code | Claude Code CLI |
+| [AGENTS.md](AGENTS.md) | Universal development instructions | OpenAI Codex, Cursor, Windsurf, Copilot, Cline, Aider, etc. |
+| [skills/rust/SKILL.md](skills/rust/SKILL.md) | Rust coding standard (179 rules, 14 categories) | All agents |
+
+**CLAUDE.md** is the primary instruction file. Claude Code reads it automatically at session start. It defines mandatory build checks, architecture constraints, coding standards, workflow orchestration (plan mode, subagents, verification loops), and session continuity via HANDOVER protocol.
+
+**AGENTS.md** contains the same project context and coding standards in a framework-agnostic format that any AI coding tool can consume.
+
+**skills/rust/SKILL.md** is the comprehensive Rust coding standard with 179 rules organized by priority (CRITICAL / HIGH / MEDIUM / LOW) across ownership, error handling, async patterns, API design, performance, testing, and more. All agents reference this file for Rust-specific decisions.
+
+### LSP Integration (rust-analyzer)
+
+We use **Language Server Protocol** via the `rust-analyzer-lsp` plugin to give AI agents real-time code intelligence during development.
+
+**Why LSP matters for agentic coding:**
+
+- **Instant error detection** -- after every file edit, the language server analyzes changes and reports type errors, missing imports, and lifetime issues immediately. The agent catches and fixes mistakes in the same turn instead of discovering them during a full `cargo build`
+- **Precise navigation** -- go-to-definition, find-references, hover-for-types, and call hierarchy give the agent exact knowledge of the codebase structure. This is significantly more accurate than grep-based search, especially in a 15-crate workspace where the same name might appear in different contexts
+- **Reduced iteration cycles** -- without LSP, the agent writes code, runs the compiler, reads errors, and fixes them. With LSP, the agent sees diagnostics inline and resolves issues before compilation. On a project of Antec's size, this eliminates entire rounds of build-fix-rebuild
+- **Cross-crate awareness** -- rust-analyzer understands the full workspace dependency graph. When the agent modifies a trait in `antec-core`, it immediately sees which implementations in `antec-channels` or `antec-tools` need updating
+
+**Setup:**
+```bash
+# Install rust-analyzer (if not already present)
+rustup component add rust-analyzer
+
+# Install the Claude Code LSP plugin
+/plugin install rust-analyzer-lsp@claude-plugins-official
+```
+
+### Context7 MCP -- Live Documentation
+
+We use **Context7** as an MCP (Model Context Protocol) server to provide AI agents with up-to-date library documentation during development.
+
+**Why Context7 matters:**
+
+- **No stale knowledge** -- AI models have training cutoffs. Tokio 1.x, Axum 0.7, wasmtime 27, and rusqlite 0.32 may have API changes the model doesn't know about. Context7 fetches current documentation on demand so the agent never guesses at function signatures or deprecated patterns
+- **Verified API usage** -- instead of hallucinating plausible-looking API calls, the agent queries the actual docs for `tokio-rs/tokio`, `tokio-rs/axum`, `rusqlite/rusqlite`, `bytecodealliance/wasmtime`, and `rust-lang/reference` before writing code. This eliminates a class of bugs that only surface at compile time
+- **Dependency evaluation** -- when considering a new crate, the agent can check its current API surface, version compatibility, and feature flags rather than relying on potentially outdated training data
+- **Language reference** -- complex Rust semantics (lifetime elision rules, trait object safety, async trait bounds) are verified against the official Rust reference rather than recalled from memory
+
+**Configuration** (`.claude/settings.json`):
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}
+```
+
+**Key libraries to query:**
+| Library ID | What it provides |
+|-----------|-----------------|
+| `rust-lang/reference` | Rust language semantics, lifetime rules, trait system |
+| `tokio-rs/tokio` | Async runtime, channels, I/O, synchronization primitives |
+| `tokio-rs/axum` | HTTP framework, extractors, middleware, WebSocket |
+| `rusqlite/rusqlite` | SQLite bindings, connection pooling, FTS5 |
+| `bytecodealliance/wasmtime` | WASM runtime, fuel metering, epoch interrupts |
+| `serde-rs/serde` | Serialization framework, derive macros, attributes |
+
+### Rust Coding Standard
+
+The full coding standard lives in [`skills/rust/SKILL.md`](skills/rust/SKILL.md). It defines 179 rules across 14 prioritized categories:
+
+| Priority | Category | Prefix | Rules | Key Focus |
+|----------|----------|--------|-------|-----------|
+| CRITICAL | Ownership & Borrowing | `own-` | 12 | Borrow over clone, `Arc` in async, `tokio::sync::Mutex` across `.await` |
+| CRITICAL | Error Handling | `err-` | 12 | `thiserror` for libs, `anyhow` for app, never `.unwrap()` in production |
+| CRITICAL | Memory Optimization | `mem-` | 15 | `Vec::with_capacity`, `SmallVec`, `Cow`, zero-copy parsing |
+| HIGH | API Design | `api-` | 15 | Newtype IDs, builder pattern, trait-based plugins, sealed traits |
+| HIGH | Async/Await | `async-` | 15 | Tokio-only, `JoinSet`, bounded channels, `spawn_blocking`, timeouts |
+| HIGH | Compiler Optimization | `opt-` | 12 | LTO, single codegen unit, `panic=abort`, PGO |
+| MEDIUM | Naming Conventions | `name-` | 12 | `PascalCase` types, `snake_case` fns, `as_`/`to_`/`into_` conversions |
+| MEDIUM | Type Safety | `type-` | 8 | Enum state machines, exhaustive matching, parse-don't-validate |
+| MEDIUM | Testing | `test-` | 12 | Offline-only, mock via traits, `proptest`, `insta` snapshots |
+| MEDIUM | Documentation | `doc-` | 8 | Public API docs, runnable examples, `# Safety` for unsafe |
+| MEDIUM | Performance | `perf-` | 8 | `LazyLock`, batch SQL in transactions, streaming, connection pool |
+| LOW | Project Structure | `proj-` | 6 | One type per file, `pub(crate)`, feature flags, workspace deps |
+| LOW | Clippy & Linting | `lint-` | 5 | `-D warnings`, pedantic, `#![forbid(unsafe_code)]`, `rustfmt.toml` |
+| REF | Anti-patterns | `anti-` | 15 | Common Rust mistakes to avoid with correct alternatives |
+
+---
+
 ## How to Use This Documentation
 
 1. **Start with [01-ARCHITECTURE.md](01-ARCHITECTURE.md)** -- understand the crate layout and system boundaries
