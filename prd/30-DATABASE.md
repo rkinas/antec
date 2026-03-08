@@ -41,14 +41,14 @@ flowchart TB
 
         subgraph Storage["antec-storage"]
             POOL["r2d2 Connection Pool<br/>(8 max, 1 min idle)"]
-            REPO["Repository Traits<br/>(21 traits)"]
-            MIGRATE["Migration Engine<br/>(21 migrations)"]
+            REPO["Repository Traits<br/>(22 traits)"]
+            MIGRATE["Migration Engine<br/>(22 migrations)"]
             MODELS["Rust Models<br/>(20+ structs)"]
         end
     end
 
     subgraph DB["SQLite 3 (WAL Mode)"]
-        TABLES["20 Regular Tables"]
+        TABLES["21 Regular Tables"]
         FTS["1 FTS5 Virtual Table"]
         TRIGGERS["3 Sync Triggers"]
         IDX["25 Indexes"]
@@ -79,7 +79,7 @@ flowchart TB
 | Convention | Rule |
 |------------|------|
 | **Primary keys** | `TEXT` (UUID v4) unless noted as `INTEGER PRIMARY KEY AUTOINCREMENT` |
-| **Timestamps** | `INTEGER` Unix epoch seconds (see inconsistency §16.3) |
+| **Timestamps** | `INTEGER` Unix epoch seconds |
 | **Booleans** | `INTEGER` (0 = false, 1 = true) |
 | **JSON data** | `TEXT` columns (validated at application layer) |
 | **Binary data** | `BLOB` (encryption nonces, embedding vectors) |
@@ -99,6 +99,8 @@ erDiagram
     memories ||--o| memory_embeddings : "has embedding"
     memories ||--o{ memory_links : "source"
     memories ||--o{ memory_links : "target"
+
+    memories ||--o{ memory_ops_log : "audited by"
 
     model_instances ||--o{ agents : "configures"
 
@@ -139,7 +141,7 @@ erDiagram
     }
 
     memory_embeddings {
-        TEXT memory_id PK_FK
+        TEXT memory_id PK "FK to memories.id"
         BLOB embedding
         TEXT model
         INTEGER dimensions
@@ -157,6 +159,7 @@ erDiagram
 
     memory_snapshots {
         TEXT id PK
+        TEXT reason
         INTEGER created_at
         INTEGER memory_count
         INTEGER size_bytes
@@ -217,6 +220,8 @@ erDiagram
         INTEGER timeout_ms
         INTEGER enabled
         INTEGER updated_at
+        TEXT network_scope
+        TEXT fs_scope
     }
 
     approval_requests {
@@ -246,7 +251,10 @@ erDiagram
     }
 
     auth_tokens {
-        TEXT token PK
+        TEXT id PK
+        TEXT token_hash
+        INTEGER last_used_at
+        INTEGER revoked
         INTEGER created_at
         INTEGER expires_at
         INTEGER paired_at
@@ -304,6 +312,16 @@ erDiagram
         TEXT output
         INTEGER success
         INTEGER created_at
+    }
+
+    memory_ops_log {
+        INTEGER id PK
+        INTEGER timestamp
+        TEXT memory_id
+        TEXT operation
+        TEXT actor
+        TEXT source_session
+        TEXT details
     }
 ```
 
@@ -939,7 +957,7 @@ flowchart LR
 | 13 | `skills` | `idx_skills_enabled` | `enabled` | Regular |
 | 14 | `skills` | `idx_skills_skill_type` | `skill_type` | Regular |
 | 15 | `model_usage` | `idx_model_usage_timestamp` | `timestamp` | Regular |
-| 16 | `mcp_servers` | `idx_mcp_servers_name` | `name` | Regular (redundant, see §16.8) |
+| 16 | `mcp_servers` | ~~`idx_mcp_servers_name`~~ | `name` | **Removed** (redundant with UNIQUE constraint) |
 | 17 | `workspace_file_versions` | `idx_wfv_path` | `file_path` | Regular |
 | 18 | `workspace_file_versions` | `idx_wfv_path_version` | `file_path, version DESC` | **Composite DESC** |
 | 19 | `memory_links` | `idx_memory_links_source` | `source_id` | Regular |
@@ -977,19 +995,21 @@ flowchart TB
     M019["019: agents"]
     M020["020: memory_links"]
     M021["021: model_instances,<br/>agents.model_instance_id"]
+    M022["022: memory_ops_log"]
 
     M001 --> M002 --> M003 --> M004 --> M005
     M005 --> M006 --> M007 --> M008 --> M009
     M009 --> M010 --> M011 --> M012 --> M013
     M013 --> M014 --> M015 --> M016 --> M017
     M017 --> M018 --> M019 --> M020 --> M021
+    M021 --> M022
 
     style M001 fill:#e8f5e9
     style M011 fill:#fff3e0
-    style M021 fill:#e3f2fd
+    style M022 fill:#e3f2fd
 ```
 
-**Schema version**: `PRAGMA user_version = 21` after all migrations.
+**Schema version**: `PRAGMA user_version = 22` after all migrations.
 
 Version skipping is safe: upgrading from v1.0 (schema v5) to v2.0 (schema v21) runs migrations 6-21 sequentially.
 
