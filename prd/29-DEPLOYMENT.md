@@ -866,12 +866,12 @@ v1.0.0 (schema v1) ──> v1.1.0 (schema v2) ──> v2.0.0 (schema v5)
 host = "127.0.0.1"
 port = 8088
 
-[llm]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
+[models]
+default_provider = "anthropic"
+default_model = "claude-sonnet-4-20250514"
 # API key via env: ANTHROPIC_API_KEY (never in config file)
 
-[storage]
+[general]
 data_dir = "/var/lib/antec"   # Linux server
 # data_dir = "/data"          # Docker
 
@@ -886,7 +886,7 @@ rate_limit_rpm = 60
 Secrets are **never** stored in `antec.toml`. Following pattern, config fields reference environment variable names:
 
 ```toml
-[llm]
+[models.providers.anthropic]
 api_key_env = "ANTHROPIC_API_KEY"   # Name of env var, not the actual key
 ```
 
@@ -1172,7 +1172,7 @@ max_concurrent_sessions = 3    # Limit for 4 GB RAM
 [memory]
 compaction_threshold = 50      # Compact earlier to save RAM
 
-[storage]
+[general]
 sqlite_cache_size_kb = 8192    # 8 MB SQLite cache (default: 32 MB)
 ```
 

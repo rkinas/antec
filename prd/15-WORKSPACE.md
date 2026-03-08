@@ -158,7 +158,7 @@ Content-Type: application/json
 1. Resolve path within workspace jail
 2. Create parent directories if they do not exist
 3. Write content to filesystem
-4. Create a new version entry in SQLite (`file_versions` table)
+4. Create a new version entry in SQLite (`workspace_file_versions` table)
 5. Return confirmation with path and byte count
 
 #### Upload File
@@ -179,16 +179,16 @@ Every write operation creates a new version entry in SQLite, enabling full chang
 #### Database Schema
 
 ```sql
-CREATE TABLE file_versions (
+CREATE TABLE workspace_file_versions (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     file_path   TEXT NOT NULL,
     content     TEXT NOT NULL,
     version     INTEGER NOT NULL,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at  INTEGER NOT NULL,
     size_bytes  INTEGER NOT NULL
 );
 
-CREATE INDEX idx_file_versions_path ON file_versions(file_path);
+CREATE INDEX idx_wfv_path ON workspace_file_versions(file_path);
 ```
 
 #### Version Lifecycle
@@ -202,11 +202,11 @@ sequenceDiagram
 
     Client->>API: PUT /workspace/files/main.rs
     API->>FS: Write file to disk
-    API->>DB: INSERT file_versions (path, content, version=N+1)
+    API->>DB: INSERT workspace_file_versions (path, content, version=N+1)
     API-->>Client: { path, size, version }
 
     Client->>API: GET /workspace/file-versions/main.rs
-    API->>DB: SELECT * FROM file_versions WHERE file_path = ?
+    API->>DB: SELECT * FROM workspace_file_versions WHERE file_path = ?
     API-->>Client: [{ version: 1, created_at, size }, { version: 2, ... }]
 
     Client->>API: GET /workspace/file-diff/main.rs?v1=1&v2=2
@@ -217,7 +217,7 @@ sequenceDiagram
     Client->>API: POST /workspace/file-revert/main.rs?version=1
     API->>DB: Load content for version 1
     API->>FS: Write old content to disk
-    API->>DB: INSERT file_versions (content=v1_content, version=N+1)
+    API->>DB: INSERT workspace_file_versions (content=v1_content, version=N+1)
     API-->>Client: { reverted_to: 1, new_version: 3 }
 ```
 
@@ -236,7 +236,7 @@ sequenceDiagram
 | Data | Storage | Details |
 |------|---------|---------|
 | File content | Filesystem | Written to `~/.antec/workspace/` |
-| Version history | SQLite | `file_versions` table with full content snapshots |
+| Version history | SQLite | `workspace_file_versions` table with full content snapshots |
 | File metadata | Filesystem | Size, mtime from OS stat |
 
 The workspace directory is created on first access if it does not exist (`Workspace::new()` calls `create_dir_all`).
@@ -422,7 +422,7 @@ CREATE TABLE repl_history (
     code        TEXT NOT NULL,
     output      TEXT,
     success     INTEGER NOT NULL DEFAULT 1,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at  INTEGER NOT NULL
 );
 ```
 

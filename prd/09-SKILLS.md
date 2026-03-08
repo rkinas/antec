@@ -262,7 +262,10 @@ impl SkillManager {
 
 ### Database Schema
 
+> **Note:** This v1 schema was superseded by migration 011. The current schema is defined in 06-STORAGE §3.13.
+
 ```sql
+-- v1 (original, superseded)
 CREATE TABLE skills (
     name        TEXT PRIMARY KEY,
     version     TEXT NOT NULL,
@@ -274,6 +277,19 @@ CREATE TABLE skills (
     checksum    TEXT,
     installed_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+```sql
+-- v2 (current, migration 011)
+CREATE TABLE skills (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL UNIQUE,
+    content      TEXT,
+    skill_type   TEXT,
+    has_code     INTEGER,
+    source_url   TEXT,
+    installed_at INTEGER
 );
 ```
 

@@ -41,7 +41,7 @@ The codebase is organized as a **Cargo workspace** with 15 crates under `crates/
 | `antec-skills` | Skill manifest parsing (TOML), skill hub client, lifecycle management (install/enable/disable/uninstall), multi-runtime execution (Python, Node.js, WASM), scaffold CLI, progressive loading |
 | `antec-mcp` | Model Context Protocol client implementation, stdio/SSE/HTTP transport layers, tool discovery and dynamic registration, server lifecycle management, protocol message serialization |
 | `antec-scheduler` | Cron expression parser, natural language schedule parsing, heartbeat jobs, one-shot reminders, 30-second poll loop, missed-fire recovery, job persistence in SQLite |
-| `antec-security` | Multi-layer injection detection (pattern matching + heuristic scoring), AES-256-GCM secrets vault, HMAC-SHA256 audit chain, GCRA rate limiter, secret redaction in outputs, command blocklist |
+| `antec-security` | Multi-layer injection detection (pattern matching + heuristic scoring), ChaCha20-Poly1305 secrets vault, HMAC-SHA256 audit chain, GCRA rate limiter, secret redaction in outputs, command blocklist |
 | `antec-storage` | SQLite connection pool (r2d2, 8 connections), WAL mode initialization, foreign key enforcement, 21 versioned migrations, repository pattern for all data access, query builders |
 | `antec-i18n` | Compile-time translation macro `t!()`, EN and PL locale files, fallback to EN for missing keys, format string interpolation, locale switching at runtime |
 | `antec-console` | Web Console SPA frontend (vanilla HTML + CSS + JS with ES modules), static asset embedding via `rust-embed`, MIME type detection, gzip pre-compression, 22 pages |
@@ -123,7 +123,7 @@ sequenceDiagram
     Migrate-->>Migrate: Apply 21 versioned migrations (idempotent, ordered)
     Migrate->>Sec: 6. Initialize security chain
     Sec-->>Sec: Build injection detector (patterns + heuristics)
-    Sec-->>Sec: Open/create secret vault (AES-256-GCM, derive key from master)
+    Sec-->>Sec: Open/create secret vault (ChaCha20-Poly1305, derive key via Argon2id)
     Sec-->>Sec: Initialize GCRA rate limiter (from config)
     Sec-->>Sec: Initialize audit logger (HMAC chain)
     Sec->>Auth: 7. Initialize auth manager
@@ -235,7 +235,7 @@ graph TB
     subgraph Security["Security Layer - Cross-cutting"]
         Injection[Injection Detector]
         RateLimiter[GCRA Rate Limiter]
-        SecretVault[Secret Vault - AES-256-GCM]
+        SecretVault[Secret Vault - ChaCha20-Poly1305]
         Blocklist[Command Blocklist]
         Sandbox[WASM Sandbox]
     end

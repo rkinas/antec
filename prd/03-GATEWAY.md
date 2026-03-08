@@ -152,7 +152,7 @@ pub struct AuthManager {
     otp: RwLock<Option<String>>,
     tokens: RwLock<HashMap<String, TokenInfo>>,
     token_ttl: chrono::Duration,         // default: 720 hours (30 days)
-    db: Option<Arc<Database>>,           // for persistent token storage
+    db: Option<Arc<Database>>,           // for persistent token storage (hash-based; tracks last_used_at)
 }
 ```
 
@@ -187,13 +187,14 @@ sequenceDiagram
 
 | Property | Value |
 |----------|-------|
-| **Format** | UUID v4 |
+| **Format** | UUID v4 (raw token never stored; SHA-256 hash persisted as `token_hash`) |
 | **TTL** | 720 hours (30 days), configurable via `with_ttl(hours)` |
-| **Persistence** | Stored in SQLite via `AuthTokenRepo`; survives server restart |
-| **Loading** | `load_tokens_from_db()` called at startup to restore valid tokens |
-| **Expiry** | `validate_token()` checks `now < expires_at`; `cleanup_expired()` removes stale entries |
-| **Revocation** | `revoke_token(token)` removes single token; `revoke_all()` clears everything |
-| **First-run detection** | `has_valid_pairing()` returns false when no valid tokens exist |
+| **Persistence** | Hash stored in SQLite via `AuthTokenRepo`; survives server restart |
+| **Loading** | `load_tokens_from_db()` called at startup to restore valid token hashes |
+| **Expiry** | `verify_token()` checks `now < expires_at` and `revoked = 0`; `cleanup_expired()` removes stale entries |
+| **Revocation** | `revoke_token(id)` sets `revoked = 1` for single token; `revoke_all()` revokes everything |
+| **Last-used tracking** | `touch_last_used(id)` updates `last_used_at` on each successful validation |
+| **First-run detection** | `has_valid_pairing()` returns false when no valid (non-revoked, non-expired) tokens exist |
 
 ### REST Revocation
 

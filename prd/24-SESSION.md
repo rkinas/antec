@@ -295,7 +295,7 @@ pub trait SessionRepo {
 | `create_session` | `INSERT INTO sessions (id, channel, channel_id, created_at, updated_at, metadata, archived_at) VALUES (...)` |
 | `get_session` | `SELECT ... FROM sessions WHERE id = ?1` |
 | `list_sessions` | `SELECT ... FROM sessions ORDER BY updated_at DESC` |
-| `delete_session` | `DELETE FROM sessions WHERE id = ?1` |
+| `delete_session` | `BEGIN; DELETE FROM messages WHERE session_id = ?1; DELETE FROM sessions WHERE id = ?1; COMMIT;` |
 | `update_session_timestamp` | `UPDATE sessions SET updated_at = ?1 WHERE id = ?2` |
 | `archive_session` | `UPDATE sessions SET archived_at = ?1 WHERE id = ?2` |
 | `unarchive_session` | `UPDATE sessions SET archived_at = NULL WHERE id = ?1` |

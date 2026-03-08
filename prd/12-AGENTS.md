@@ -20,7 +20,7 @@ Users can invoke agents explicitly via @mentions or let the system route automat
 | **Merge strategies** | Concatenate, Summarize, or VoteConsensus — flexible result combination |
 
 > **Crate**: `antec-core` (`crates/antec-core/`) -- agent routing, spawning, parallel execution, bundled agents
-> **Storage**: `antec-storage` -- `agent_definitions` table (migration 018)
+> **Storage**: `antec-storage` -- `agents` table (migration 018)
 > **Purpose**: Route messages to specialized agents, manage agent definitions, and execute tasks in parallel via sub-agent delegation.
 
 ---
@@ -31,7 +31,7 @@ Each agent is a named configuration that determines persona, available tools, sk
 
 ### Database Schema
 
-**Table**: `agent_definitions`
+**Table**: `agents`
 
 | Column              | Type    | Constraints                        | Description                                      |
 |---------------------|---------|------------------------------------|--------------------------------------------------|

@@ -1,12 +1,12 @@
 # 06 -- Storage Layer (SQLite)
 
-> **Module Goal:** Provide the persistence foundation for the entire system — 20 SQLite tables, connection pooling, migrations, full-text search, and repository traits — enabling zero-dependency data storage with ACID guarantees.
+> **Module Goal:** Provide the persistence foundation for the entire system — 21 SQLite tables, connection pooling, migrations, full-text search, and repository traits — enabling zero-dependency data storage with ACID guarantees.
 
 ### Why This Module Exists
 
 Every subsystem in Antec needs to persist data: conversations, memories, tool approvals, model usage, audit logs, schedules, and more. Using an external database would violate Antec's "zero mandatory dependencies" principle and complicate deployment.
 
-The Storage module solves this with SQLite — a single file database embedded in the binary. It provides 20 tables covering all system needs, r2d2 connection pooling for concurrent access, ordered migrations for schema evolution, FTS5 virtual tables for full-text search, and clean repository traits that decouple storage logic from business logic. WAL mode ensures readers never block writers.
+The Storage module solves this with SQLite — a single file database embedded in the binary. It provides 21 tables covering all system needs, r2d2 connection pooling for concurrent access, ordered migrations for schema evolution, FTS5 virtual tables for full-text search, and clean repository traits that decouple storage logic from business logic. WAL mode ensures readers never block writers.
 
 ### Business Benefits
 
@@ -84,7 +84,7 @@ pub struct Database {
 
 ### 2.1 Strategy
 
-- **21 versioned migrations** tracked via the `user_version` PRAGMA.
+- **22 versioned migrations** tracked via the `user_version` PRAGMA.
 - Applied sequentially on startup in a single connection.
 - Each migration is an embedded SQL string (`include_str!`).
 - Idempotent: re-running migrations on an already-migrated database is safe.
@@ -121,6 +121,7 @@ PRAGMA user_version = N;  -- set after applying migration N
 | 19 | `019_agents.sql` | Create `agents` table with unique constraint on is_default=1 |
 | 20 | `020_memory_links.sql` | Create `memory_links` table with UNIQUE(source_id, target_id, relation), indexes on source/target/relation |
 | 21 | `021_model_instances.sql` | Create `model_instances` table. Add `model_instance_id` column to agents (with safety-net fallback) |
+| 22 | `022_memory_ops_log.sql` | Create `memory_ops_log` table for dedicated memory mutation audit trail |
 
 ### 2.4 Safety Net (Migration 21)
 
@@ -208,7 +209,7 @@ CREATE TABLE audit_log (
     target     TEXT,                      -- target resource (tool name, session id, etc.)
     details    TEXT,                      -- JSON details
     session_id TEXT,                      -- associated session (nullable)
-    risk_level TEXT    DEFAULT 'low',     -- 'low', 'medium', 'high', 'critical'
+    risk_level TEXT    DEFAULT 'safe',    -- 'safe', 'moderate', 'dangerous', 'unknown'
     hmac_sig   TEXT                       -- chained HMAC-SHA256 signature (added in migration 2)
 );
 
@@ -263,7 +264,7 @@ CREATE TABLE memories (
     id           TEXT    PRIMARY KEY,
     key          TEXT    NOT NULL,         -- short identifier / title
     content      TEXT    NOT NULL,         -- full memory content
-    category     TEXT,                     -- 'preference', 'fact', 'instruction', 'other'
+    category     TEXT,                     -- 'fact', 'preference', 'decision', 'task', 'contact', 'skill', 'relationship', 'event', 'conversation', 'other'
     tags         TEXT,                     -- JSON array of tag strings
     source       TEXT    NOT NULL DEFAULT 'user',  -- 'user', 'auto', 'pending'
     importance   REAL    NOT NULL DEFAULT 0.5,     -- 0.0 to 1.0
@@ -397,6 +398,7 @@ pub struct MemoryLinkRow {
 ```sql
 CREATE TABLE memory_snapshots (
     id            TEXT PRIMARY KEY,
+    reason        TEXT,
     created_at    INTEGER NOT NULL,
     memory_count  INTEGER NOT NULL DEFAULT 0,
     size_bytes    INTEGER NOT NULL DEFAULT 0,
@@ -409,6 +411,7 @@ CREATE TABLE memory_snapshots (
 ```rust
 pub struct MemorySnapshotRow {
     pub id: String,
+    pub reason: Option<String>,
     pub created_at: i64,
     pub memory_count: i64,
     pub size_bytes: i64,
@@ -423,6 +426,8 @@ CREATE TABLE tool_policies (
     tool_name  TEXT    PRIMARY KEY,
     risk_class TEXT    NOT NULL,          -- 'safe', 'moderate', 'dangerous'
     policy     TEXT,                      -- 'always_allow', 'always_deny', etc.
+    network_scope TEXT,                   -- network access scope
+    fs_scope   TEXT,                      -- filesystem access scope
     rate_limit INTEGER,                   -- requests per minute (NULL = default)
     timeout_ms INTEGER,                   -- execution timeout in ms
     updated_at INTEGER NOT NULL,
@@ -437,6 +442,8 @@ pub struct ToolPolicyRow {
     pub tool_name: String,
     pub risk_class: String,
     pub policy: Option<String>,
+    pub network_scope: Option<String>,
+    pub fs_scope: Option<String>,
     pub rate_limit: Option<i32>,
     pub timeout_ms: Option<i32>,
     pub updated_at: i64,
@@ -596,10 +603,13 @@ pub struct ModelUsageRow {
 
 ```sql
 CREATE TABLE auth_tokens (
-    token      TEXT    PRIMARY KEY,       -- bearer token string
-    created_at INTEGER NOT NULL,
-    expires_at INTEGER NOT NULL,
-    paired_at  INTEGER NOT NULL           -- when OTP pairing completed
+    id          TEXT PRIMARY KEY,
+    token_hash  TEXT NOT NULL,
+    last_used_at INTEGER,
+    revoked     INTEGER NOT NULL DEFAULT 0,
+    created_at  INTEGER NOT NULL,
+    expires_at  INTEGER NOT NULL,
+    paired_at   INTEGER NOT NULL
 );
 ```
 
@@ -607,7 +617,10 @@ CREATE TABLE auth_tokens (
 
 ```rust
 pub struct AuthTokenRow {
-    pub token: String,
+    pub id: String,
+    pub token_hash: String,
+    pub last_used_at: Option<i64>,
+    pub revoked: bool,
     pub created_at: i64,
     pub expires_at: i64,
     pub paired_at: i64,
@@ -625,7 +638,6 @@ CREATE TABLE mcp_servers (
     added_at INTEGER NOT NULL
 );
 
-CREATE INDEX idx_mcp_servers_name ON mcp_servers(name);
 ```
 
 **Rust model:**
@@ -770,6 +782,43 @@ pub struct ReplHistoryRow {
 }
 ```
 
+### 3.21 memory_ops_log
+
+Dedicated mutation audit trail for memory operations. Tracks every create, update, delete, pin, and archive action on memories, providing a complete history of how the memory store evolved.
+
+```sql
+CREATE TABLE memory_ops_log (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp      INTEGER NOT NULL,            -- Unix timestamp of the operation
+    memory_id      TEXT NOT NULL,               -- references memories(id), not FK to allow logging deletes
+    operation      TEXT NOT NULL,               -- 'create', 'update', 'delete', 'pin', 'archive'
+    actor          TEXT NOT NULL,               -- 'agent', 'user', 'system', 'skill:<name>'
+    source_session TEXT,                        -- which session triggered the op (nullable)
+    details        TEXT                         -- JSON diff or reason (nullable)
+);
+```
+
+**Rust model:**
+
+```rust
+pub struct MemoryOpsLogRow {
+    pub id: i64,
+    pub timestamp: i64,
+    pub memory_id: String,
+    pub operation: String,
+    pub actor: String,
+    pub source_session: Option<String>,
+    pub details: Option<String>,
+}
+```
+
+**Design notes:**
+
+- `memory_id` is intentionally **not** a foreign key — operations on deleted memories must still be queryable.
+- `operation` values are: `create`, `update`, `delete`, `pin`, `archive`.
+- `actor` identifies who/what initiated the operation (e.g., `agent`, `user`, `system`, `skill:weather`).
+- `details` stores a JSON diff for updates, or a reason string for deletes/archives.
+
 ---
 
 ## 4. Entity Relationship Diagram
@@ -824,6 +873,7 @@ erDiagram
     memories ||--o| memory_embeddings : "has one"
     memories ||--o{ memory_links : "source"
     memories ||--o{ memory_links : "target"
+    memories ||--o{ memory_ops_log : "audited by"
 
     memories {
         TEXT id PK
@@ -860,16 +910,29 @@ erDiagram
 
     memory_snapshots {
         TEXT id PK
+        TEXT reason
         INTEGER created_at
         INTEGER memory_count
         INTEGER size_bytes
         TEXT snapshot_data
     }
 
+    memory_ops_log {
+        INTEGER id PK
+        INTEGER timestamp
+        TEXT memory_id
+        TEXT operation
+        TEXT actor
+        TEXT source_session
+        TEXT details
+    }
+
     tool_policies {
         TEXT tool_name PK
         TEXT risk_class
         TEXT policy
+        TEXT network_scope
+        TEXT fs_scope
         INTEGER rate_limit
         INTEGER timeout_ms
         INTEGER updated_at
@@ -930,7 +993,10 @@ erDiagram
     }
 
     auth_tokens {
-        TEXT token PK
+        TEXT id PK
+        TEXT token_hash
+        INTEGER last_used_at
+        INTEGER revoked
         INTEGER created_at
         INTEGER expires_at
         INTEGER paired_at
@@ -1329,10 +1395,11 @@ pub trait SkillRepo {
 
 ```rust
 pub trait AuthTokenRepo {
-    fn store_auth_token(&self, token: &AuthTokenRow) -> Result<()>;
-    fn list_valid_auth_tokens(&self, now: i64) -> Result<Vec<AuthTokenRow>>;
-    fn delete_auth_token(&self, token: &str) -> Result<bool>;
-    fn delete_expired_auth_tokens(&self, now: i64) -> Result<u64>;
+    fn store_token(&self, id: &str, token_hash: &str, expires_at: i64, paired_at: i64) -> Result<()>;
+    fn verify_token(&self, token_hash: &str) -> Result<Option<AuthTokenRow>>;
+    fn revoke_token(&self, id: &str) -> Result<bool>;
+    fn touch_last_used(&self, id: &str) -> Result<()>;
+    fn cleanup_expired(&self, now: i64) -> Result<u64>;
 }
 ```
 
@@ -1484,6 +1551,22 @@ pub struct StoragePaths {
 }
 ```
 
+### 5.22 MemoryOpsLogRepo
+
+```rust
+pub trait MemoryOpsLogRepo {
+    fn log_operation(&self, entry: &MemoryOpsLogRow) -> Result<()>;
+    fn get_ops_for_memory(&self, memory_id: &str, limit: usize) -> Result<Vec<MemoryOpsLogRow>>;
+    fn get_recent_ops(&self, limit: usize) -> Result<Vec<MemoryOpsLogRow>>;
+}
+```
+
+**Implementation notes:**
+
+- `log_operation` inserts a new row into `memory_ops_log`. Called by `MemoryRepo` methods internally (create, update, delete, pin, archive) to maintain a complete audit trail.
+- `get_ops_for_memory` returns operations for a specific memory, ordered by `timestamp DESC`, limited to `limit` rows.
+- `get_recent_ops` returns the most recent operations across all memories, ordered by `timestamp DESC`, limited to `limit` rows.
+
 ---
 
 ## 6. Error Types
@@ -1590,7 +1673,7 @@ pub mod workspace;
 
 pub use db::Database;
 pub use error::{Result, StorageError};
-pub use repository::{AgentRepo, MemoryLinkRepo, ReplHistoryRepo, WorkspaceFileRepo};
+pub use repository::{AgentRepo, MemoryLinkRepo, MemoryOpsLogRepo, ReplHistoryRepo, WorkspaceFileRepo};
 pub use workspace::Workspace;
 ```
 
@@ -1600,7 +1683,7 @@ pub use workspace::Workspace;
 
 | Test Category | Approach |
 |---------------|----------|
-| Migration idempotency | Open in-memory DB, verify `user_version = 21`, re-run migrations, verify no error |
+| Migration idempotency | Open in-memory DB, verify `user_version = 22`, re-run migrations, verify no error |
 | Table existence | After migration, query `sqlite_master` for all expected table names |
 | WAL mode | Verify `PRAGMA journal_mode` returns `"wal"` (or `"memory"` for in-memory) |
 | Foreign keys | Verify `PRAGMA foreign_keys` returns `1` |
