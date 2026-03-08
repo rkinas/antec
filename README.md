@@ -216,7 +216,7 @@ sequenceDiagram
 
 | # | Document | Crate | Description |
 |---|----------|-------|-------------|
-| 29 | [Deployment](prd/29-DEPLOYMENT.md) | `` | Define the complete deployment pipeline -- build targets, packaging formats, release automation, install scripts etc. |
+| 29 | [Deployment](prd/29-DEPLOYMENT.md) |  | Define the complete deployment pipeline -- build targets, packaging formats, release automation, install scripts etc. |
 ---
 
 ## Crate Map
