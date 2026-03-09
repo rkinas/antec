@@ -444,12 +444,12 @@ The full coding standard lives in [`.claude/skills/rust/SKILL.md`](.claude/skill
 
 ## How to Use This Documentation
 
-1. **Start with [01-ARCHITECTURE.md](01-ARCHITECTURE.md)** -- understand the crate layout and system boundaries
-2. **Read [02-CORE.md](02-CORE.md)** -- learn the agent loop, the central processing pipeline
-3. **Read [06-STORAGE.md](06-STORAGE.md)** -- understand the database schema that underpins everything
+1. **Start with [01-ARCHITECTURE.md](prd/01-ARCHITECTURE.md)** -- understand the crate layout and system boundaries
+2. **Read [02-CORE.md](prd/02-CORE.md)** -- learn the agent loop, the central processing pipeline
+3. **Read [06-STORAGE.md](prd/06-STORAGE.md)** -- understand the database schema that underpins everything
 4. **Pick modules by need** -- each document is self-contained with all structs, traits, SQL, and API routes needed to implement that module
 5. **Use the Mermaid diagrams** -- every document includes flow diagrams that show how components interact
-6. **Reference [14-CONFIGURATION.md](14-CONFIGURATION.md)** -- the full TOML schema ties all modules together
+6. **Reference [14-CONFIGURATION.md](prd/14-CONFIGURATION.md)** -- the full TOML schema ties all modules together
 
 Each document follows a consistent structure:
 - **Module Goal** -- one-sentence purpose
